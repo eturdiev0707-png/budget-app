@@ -3,61 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <title>Open Budget Captcha</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Siz yuborgan CSS mantiqi.html] */
-        body { font-family: sans-serif; text-align: center; background: #f4f4f4; margin: 0; padding: 15px; }
-        .box { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #captcha-b { width: 100%; max-width: 345px; cursor: crosshair; border: 2px solid #007791; border-radius: 8px; margin-top: 15px; }
-        .timer-box { margin-top: 10px; font-weight: bold; color: #007791; }
-        .progress { width: 100%; background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
-        .bar { height: 100%; background: #007791; width: 100%; transition: width 1s linear; }
+        body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 15px; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .img-container { position: relative; display: inline-block; margin-top: 15px; border: 2px solid #007791; border-radius: 10px; overflow: hidden; }
+        #captcha-b { width: 100%; max-width: 350px; display: block; cursor: crosshair; }
+        .timer { font-size: 18px; font-weight: bold; color: #007791; margin: 10px 0; }
+        .progress-container { width: 100%; background: #eee; height: 8px; border-radius: 4px; }
+        #progress-bar { width: 100%; height: 100%; background: #007791; transition: width 1s linear; }
+        .label { font-size: 14px; color: #666; margin-bottom: 5px; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <div>Расм <b>A</b></div>
-        <img id="img-a" src="" height="45">
-        <hr>
-        <div>Расм <b>Б</b> dagi harfni tanlang:</div>
-        <div style="position: relative; display: inline-block;">
-            <img id="img-b" src="" onclick="getPoint(event)">
+    <div class="card">
+        <div class="label">Расм <b>A</b> (Target)</div>
+        <img id="captcha-a" src="" height="50" style="border: 1px solid #ddd; padding: 5px; border-radius: 5px;">
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+        <div class="label">Раsm <b>Б</b> (Shu yerdan toping va bosing)</div>
+        <div class="img-container">
+            <img id="captcha-b" src="" onclick="handleClick(event)">
         </div>
-        <div class="timer-box">Vaqt: <span id="timer-text">30</span>s</div>
-        <div class="progress"><div id="progress-bar" class="bar"></div></div>
+        <div class="timer">Vaqt: <span id="time">30</span>s</div>
+        <div class="progress-container"><div id="progress-bar"></div></div>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        // 1. Rasmlarni yuklash (Bot tomonidan yangilanadigan LocalStorage yoki static URL ishlatish mumkin)
-        // Eng osoni GitHub-da rasm nomlarini bir xil saqlash (captcha_a.png)
-        document.getElementById('img-a').src = "https://your-server.com/captcha_a.png?" + Date.now();
-        document.getElementById('img-b').src = "https://your-server.com/captcha_b.png?" + Date.now();
+        // Botdan kelgan Base64 rasmlarni URL fragmentdan o'qiymiz
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        document.getElementById('captcha-a').src = "data:image/png;base64," + params.get('a');
+        document.getElementById('captcha-b').src = "data:image/png;base64," + params.get('b');
 
-        // 2. Koordinatani olish.html]
-        function getPoint(e) {
-            const rect = e.target.getBoundingClientRect();
-            const x = Math.round((e.clientX - rect.left) * (e.target.naturalWidth / e.target.width));
-            const y = Math.round((e.clientY - rect.top) * (e.target.naturalHeight / e.target.height));
+        function handleClick(e) {
+            const img = e.target;
+            const rect = img.getBoundingClientRect();
             
-            const data = JSON.stringify({ id: `${x}${y}`, x: x, y: y });
-            tg.sendData(data); // Botga ma'lumot yuborish
-            tg.close(); // Appni yopish
+            // Koordinatani rasmning asl o'lchamiga nisbatan hisoblash.html]
+            const x = Math.round((e.clientX - rect.left) * (img.naturalWidth / img.width));
+            const y = Math.round((e.clientY - rect.top) * (img.naturalHeight / img.height));
+
+            const point = { id: `${x}${y}`, x: x, y: y };
+            tg.sendData(JSON.stringify(point)); // Botga yuborish
+            tg.close();
         }
 
-        // 3. Taymer (30 soniya).html]
+        // 30 soniyalik taymer.html]
         let timeLeft = 30;
         const interval = setInterval(() => {
             timeLeft--;
-            document.getElementById('timer-text').innerText = timeLeft;
+            document.getElementById('time').innerText = timeLeft;
             document.getElementById('progress-bar').style.width = (timeLeft / 30 * 100) + "%";
-            
-            if (timeLeft <= 0) {
-                clearInterval(interval);
-                tg.close();
-            }
+            if (timeLeft <= 0) { clearInterval(interval); tg.close(); }
         }, 1000);
     </script>
 </body>
