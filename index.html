@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            text-align: center;
+            font-family: sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #captcha-b {
+            width: 100%;
+            max-width: 350px;
+            cursor: crosshair;
+            border: 2px solid #007791;
+            border-radius: 5px;
+        }
+
+        .instruction {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .target-box {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="target-box">
+            <p class="instruction">Rasm <b>A</b> dagi harfni pastdagi rasmdan topib ustiga bosing:</p>
+            <img id="captcha-a" src="" height="50">
+        </div>
+        <img id="captcha-b" src="" onclick="getCoords(event)">
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Mini appni to'liq ekranga ochish
+
+        // Botdan kelgan rasmlarni URL orqali yuklash (Base64 ishlatish ham mumkin)
+        const urlParams = new URLSearchParams(window.location.search);
+        document.getElementById('captcha-a').src = urlParams.get('img_a');
+        document.getElementById('captcha-b').src = urlParams.get('img_b');
+
+        function getCoords(event) {
+            const img = event.target;
+            const rect = img.getBoundingClientRect();
+
+            // Haqiqiy koordinatani hisoblash (Rasm o'lchamiga nisbatan)
+            const x = Math.round((event.clientX - rect.left) * (img.naturalWidth / img.width));
+            const y = Math.round((event.clientY - rect.top) * (img.naturalHeight / img.height));
+
+            const result = JSON.stringify({ x: x, y: y, id: x.toString() + y.toString() });
+
+            // Ma'lumotni botga yuborish va appni yopish
+            tg.sendData(result);
+            tg.close();
+        }
+    </script>
+</body>
+
+</html>
