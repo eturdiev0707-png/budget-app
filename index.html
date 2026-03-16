@@ -1,82 +1,64 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            text-align: center;
-            font-family: sans-serif;
-            background: #f4f4f4;
-            margin: 0;
-            padding: 10px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #captcha-b {
-            width: 100%;
-            max-width: 350px;
-            cursor: crosshair;
-            border: 2px solid #007791;
-            border-radius: 5px;
-        }
-
-        .instruction {
-            font-size: 14px;
-            color: #555;
-            margin-bottom: 10px;
-        }
-
-        .target-box {
-            background: #e3f2fd;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
+        /* Siz yuborgan CSS mantiqi.html] */
+        body { font-family: sans-serif; text-align: center; background: #f4f4f4; margin: 0; padding: 15px; }
+        .box { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #captcha-b { width: 100%; max-width: 345px; cursor: crosshair; border: 2px solid #007791; border-radius: 8px; margin-top: 15px; }
+        .timer-box { margin-top: 10px; font-weight: bold; color: #007791; }
+        .progress { width: 100%; background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+        .bar { height: 100%; background: #007791; width: 100%; transition: width 1s linear; }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <div class="target-box">
-            <p class="instruction">Rasm <b>A</b> dagi harfni pastdagi rasmdan topib ustiga bosing:</p>
-            <img id="captcha-a" src="" height="50">
+    <div class="box">
+        <div>Расм <b>A</b></div>
+        <img id="img-a" src="" height="45">
+        <hr>
+        <div>Расм <b>Б</b> dagi harfni tanlang:</div>
+        <div style="position: relative; display: inline-block;">
+            <img id="img-b" src="" onclick="getPoint(event)">
         </div>
-        <img id="captcha-b" src="" onclick="getCoords(event)">
+        <div class="timer-box">Vaqt: <span id="timer-text">30</span>s</div>
+        <div class="progress"><div id="progress-bar" class="bar"></div></div>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Mini appni to'liq ekranga ochish
+        tg.expand();
 
-        // Botdan kelgan rasmlarni URL orqali yuklash (Base64 ishlatish ham mumkin)
-        const urlParams = new URLSearchParams(window.location.search);
-        document.getElementById('captcha-a').src = urlParams.get('img_a');
-        document.getElementById('captcha-b').src = urlParams.get('img_b');
+        // 1. Rasmlarni yuklash (Bot tomonidan yangilanadigan LocalStorage yoki static URL ishlatish mumkin)
+        // Eng osoni GitHub-da rasm nomlarini bir xil saqlash (captcha_a.png)
+        document.getElementById('img-a').src = "https://your-server.com/captcha_a.png?" + Date.now();
+        document.getElementById('img-b').src = "https://your-server.com/captcha_b.png?" + Date.now();
 
-        function getCoords(event) {
-            const img = event.target;
-            const rect = img.getBoundingClientRect();
-
-            // Haqiqiy koordinatani hisoblash (Rasm o'lchamiga nisbatan)
-            const x = Math.round((event.clientX - rect.left) * (img.naturalWidth / img.width));
-            const y = Math.round((event.clientY - rect.top) * (img.naturalHeight / img.height));
-
-            const result = JSON.stringify({ x: x, y: y, id: x.toString() + y.toString() });
-
-            // Ma'lumotni botga yuborish va appni yopish
-            tg.sendData(result);
-            tg.close();
+        // 2. Koordinatani olish.html]
+        function getPoint(e) {
+            const rect = e.target.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) * (e.target.naturalWidth / e.target.width));
+            const y = Math.round((e.clientY - rect.top) * (e.target.naturalHeight / e.target.height));
+            
+            const data = JSON.stringify({ id: `${x}${y}`, x: x, y: y });
+            tg.sendData(data); // Botga ma'lumot yuborish
+            tg.close(); // Appni yopish
         }
+
+        // 3. Taymer (30 soniya).html]
+        let timeLeft = 30;
+        const interval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-text').innerText = timeLeft;
+            document.getElementById('progress-bar').style.width = (timeLeft / 30 * 100) + "%";
+            
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                tg.close();
+            }
+        }, 1000);
     </script>
 </body>
-
 </html>
