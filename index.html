@@ -139,4 +139,180 @@
     </div>
 
     <!-- Asosiy kontent -->
-    <div id="captcha-view" style
+    <div id="captcha-view" style="display:none">
+
+        <h3>🔐 Rasmdagi harfni toping</h3>
+
+        <!-- Rasm A -->
+        <div class="label">Rasim <b>A</b> — Shu harfni qidiring:</div>
+        <div class="img-a-wrapper">
+            <img id="captcha-a" src="" alt="Target harf">
+        </div>
+
+        <hr style="border:0; border-top:1px solid #eee; margin: 12px 0;">
+
+        <!-- Rasm B -->
+        <div class="label">Rasim <b>B</b> — Shu yerdan bosing:</div>
+        <div class="img-b-wrapper" id="img-b-wrapper">
+            <img id="captcha-b" src="" alt="Captcha rasm">
+        </div>
+
+        <!-- Taymer -->
+        <div class="timer-row">
+            <span class="timer-text" id="timer-text">⏱ 30s</span>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // ================================================
+    // Telegram WebApp initsializatsiya
+    // ================================================
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    // ================================================
+    // URL fragmentdan rasmlarni olish
+    // Bot main.py da:
+    //   full_url = f"{MINI_APP_URL}#a={data['a']}&b={data['b']}"
+    // ================================================
+    function loadImages() {
+        const hash = window.location.hash.substring(1); // '#' ni olib tashlash
+
+        // Fragment bo'sh bo'lsa
+        if (!hash || hash.length < 10) {
+            showError("URL da rasm ma'lumoti topilmadi.");
+            return;
+        }
+
+        // URLSearchParams fragment uchun ham ishlaydi
+        const params = new URLSearchParams(hash);
+        const imgA = params.get('a');
+        const imgB = params.get('b');
+
+        if (!imgA || !imgB) {
+            showError("Rasm parametrlari topilmadi (a yoki b yo'q).");
+            return;
+        }
+
+        const captchaA = document.getElementById('captcha-a');
+        const captchaB = document.getElementById('captcha-b');
+
+        // Rasm B yuklanganda ko'rsatamiz
+        captchaB.onload = () => {
+            document.getElementById('loading-view').style.display  = 'none';
+            document.getElementById('captcha-view').style.display  = 'block';
+            startTimer();
+        };
+
+        captchaB.onerror = () => {
+            showError("Rasm yuklashda xato yuz berdi.");
+        };
+
+        // Base64 rasmlarni o'rnatish
+        captchaA.src = "data:image/png;base64," + imgA;
+        captchaB.src = "data:image/png;base64," + imgB;
+    }
+
+    // ================================================
+    // Bosish hodisasi — koordinatani hisoblash
+    // ================================================
+    let clicked = false; // Ikki marta bosilmasligi uchun
+
+    document.getElementById('img-b-wrapper').addEventListener('click', function(e) {
+        if (clicked) return;
+
+        const img    = document.getElementById('captcha-b');
+        const rect   = img.getBoundingClientRect();
+
+        // Koordinatani rasmning ASAL o'lchamiga nisbatan hisoblash
+        // (rasm ekranda kichraygan bo'lishi mumkin)
+        const scaleX = img.naturalWidth  / rect.width;
+        const scaleY = img.naturalHeight / rect.height;
+
+        const x = Math.round((e.clientX - rect.left) * scaleX);
+        const y = Math.round((e.clientY - rect.top)  * scaleY);
+
+        // Vizual marker ko'rsatish
+        showClickMarker(e.clientX - rect.left, e.clientY - rect.top);
+
+        clicked = true; // Qayta bosilmasin
+
+        // Botga yuborish
+        const point = { id: `${x}${y}`, x: x, y: y };
+
+        console.log("Yuborilayotgan koordinata:", point);
+
+        // Kichik kechikish — marker ko'rinsin
+        setTimeout(() => {
+            tg.sendData(JSON.stringify(point));
+            tg.close();
+        }, 400);
+    });
+
+    // ================================================
+    // Bosgan joyga yashil doira ko'rsatish
+    // ================================================
+    function showClickMarker(left, top) {
+        const wrapper = document.getElementById('img-b-wrapper');
+
+        // Eski markerni olib tashlash
+        const old = wrapper.querySelector('.click-marker');
+        if (old) old.remove();
+
+        const marker = document.createElement('div');
+        marker.className = 'click-marker';
+        marker.style.left = left + 'px';
+        marker.style.top  = top  + 'px';
+        wrapper.appendChild(marker);
+    }
+
+    // ================================================
+    // 30 soniyalik taymer
+    // ================================================
+    function startTimer() {
+        let timeLeft = 30;
+        const timerText = document.getElementById('timer-text');
+        const progressBar = document.getElementById('progress-bar');
+
+        const interval = setInterval(() => {
+            timeLeft--;
+            timerText.innerText = `⏱ ${timeLeft}s`;
+            progressBar.style.width = (timeLeft / 30 * 100) + '%';
+
+            // 10 soniya qolganda qizil rang
+            if (timeLeft <= 10) {
+                timerText.classList.add('urgent');
+                progressBar.style.background = '#e53935';
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                tg.close(); // Vaqt tugadi
+            }
+        }, 1000);
+    }
+
+    // ================================================
+    // Xato ko'rsatish
+    // ================================================
+    function showError(msg) {
+        document.getElementById('loading-view').style.display = 'none';
+        const errorBox = document.getElementById('error-view');
+        errorBox.style.display = 'block';
+        errorBox.innerHTML = `❌ ${msg}<br><small>Botga qaytib <b>/start</b> deb yozing.</small>`;
+    }
+
+    // ================================================
+    // Sahifa yuklanganda ishga tushirish
+    // ================================================
+    loadImages();
+</script>
+
+</body>
+</html>
