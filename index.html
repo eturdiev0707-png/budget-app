@@ -29,34 +29,38 @@
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
+    let tg = window.Telegram.WebApp;
+    tg.expand();
 
-        const params = new URLSearchParams(window.location.hash.substring(1));
-        document.getElementById('captcha-a').src = params.get('a');
-        document.getElementById('captcha-b').src = params.get('b');
-        const start = parseInt(params.get('start'));
+    const params = new URLSearchParams(window.location.hash.substring(1));
+    document.getElementById('captcha-a').src = params.get('a');
+    document.getElementById('captcha-b').src = params.get('b');
+    
+    // Bot xabarni yuborgan vaqt
+    const start = parseInt(params.get('start'));
 
-        function handleClick(e) {
-            const img = e.target;
-            const rect = img.getBoundingClientRect();
-            // Asl o'lchamga nisbatan koordinatani hisoblash
-            const x = Math.round((e.clientX - rect.left) * (img.naturalWidth / img.width));
-            const y = Math.round((e.clientY - rect.top) * (img.naturalHeight / img.height));
-            tg.sendData(JSON.stringify({ id: `${x}${y}`, x: x, y: y }));
-            tg.close();
+    function handleClick(e) {
+        const img = e.target;
+        const rect = img.getBoundingClientRect();
+        const x = Math.round((e.clientX - rect.left) * (img.naturalWidth / img.width));
+        const y = Math.round((e.clientY - rect.top) * (img.naturalHeight / img.height));
+        tg.sendData(JSON.stringify({ id: `${x}${y}`, x: x, y: y }));
+        tg.close();
+    }
+
+    const interval = setInterval(() => {
+        const now = Math.floor(Date.now() / 1000);
+        const left = 30 - (now - start);
+        
+        if (left <= 0) { 
+            document.getElementById('time').innerText = "0";
+            clearInterval(interval);
+            tg.close(); 
+        } else {
+            document.getElementById('time').innerText = left;
+            document.getElementById('progress-bar').style.width = (left / 30 * 100) + "%";
         }
-
-        setInterval(() => {
-            const left = 30 - (Math.floor(Date.now() / 1000) - start);
-            if (left <= 0) { 
-                document.getElementById('time').innerText = "0";
-                tg.close(); 
-            } else {
-                document.getElementById('time').innerText = left;
-                document.getElementById('progress-bar').style.width = (left / 30 * 100) + "%";
-            }
-        }, 500);
-    </script>
+    }, 500);
+</script>
 </body>
 </html>
